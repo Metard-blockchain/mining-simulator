@@ -3,62 +3,49 @@ pragma solidity ^0.8.0;
 import "./Token.sol";
 
 contract IDO is Ownable {
-    uint256 public offerCount;
-    uint256 public publicTime;
     uint256 public startTime;
     uint256 public cliff;
     uint256 public totalPeriods;
     uint256 public timePerPeriod;
-
     uint256 public totalTokens = 100000 * 10**18;
-    uint256 public TotalFlag;
-    uint256 public FirstReturn;
+    uint256 public totalFlag;
+    uint256 public firstReturn;
     uint256 public periodReturn;
-
-    uint256 public exchangeRate;
-    uint256 public stakingRate;
     uint256 public allow_flag = 1;
+    uint256 public numberOfAccounts = 0;
 
     mapping(uint256 => address) public userToken;
-    mapping(address => uint256) public userAmount;
-
     mapping(address => uint256) public userFunds;
     mapping(address => uint256) public userFundsInUSDT;
-    mapping(address => uint256) public buyState;
     mapping(address => uint256) public userClaim;
     mapping(address => uint256) public userRemain;
     mapping(address => uint256) public userClaimed;
     mapping(address => uint256) public userTransfer;
-    mapping(address => uint256) public award;
     mapping(address => uint256) private adminlist;
-    uint256 public numberOfAccounts = 0;
+   
     BAoEToken BATK;
 
     // Define fixed adminlist
 
     constructor(
         address _token,
-        uint256 _publicTime,
         uint256 _startTime,
         uint256 _cliff,
         uint256 _totalPeriods,
         uint256 _timePerPeriod,
-        uint256 _FirstReturn,
+        uint256 _firstReturn,
         uint256 _periodReturn,
-        uint256 _exchangeRate,
         address[] memory accounts,
         uint256[] memory packages
 
     ) {
         BATK = BAoEToken(_token);
-        publicTime = _publicTime;
-        FirstReturn = _FirstReturn;
+        firstReturn = _firstReturn;
         periodReturn = _periodReturn;
         startTime = _startTime;
         cliff = _cliff;
         totalPeriods = _totalPeriods;
         timePerPeriod = _timePerPeriod;
-        exchangeRate = _exchangeRate;
         adminlist[msg.sender] = 1;
         for (uint256 i = 0; i < accounts.length; i++) {
             userFundsInUSDT[accounts[i]] += packages[i]*(10**18);
@@ -72,9 +59,7 @@ contract IDO is Ownable {
     } 
 
     modifier onlyAdmin(){
-        if (adminlist[msg.sender] == 0){
-            revert();
-        }
+        require(adminlist[_msgSender()]==1,"OnlyAdmin");
         _;
     }
 
@@ -95,22 +80,22 @@ contract IDO is Ownable {
         BATK.transfer(msg.sender, msg.value);
     }
 
-    function claimTokens(address receiver) internal{
+    function claimTokens(address receiver) internal onlyAdmin{
         if (userRemain[receiver] > 0) {
             if (block.timestamp > startTime+cliff) {
-                TotalFlag = (block.timestamp-(startTime+cliff))/timePerPeriod;
-                if (TotalFlag == 0) {
-                    userClaim[receiver] = userFunds[receiver]*FirstReturn/100;
+                totalFlag = (block.timestamp-(startTime+cliff))/timePerPeriod;
+                if (totalFlag == 0) {
+                    userClaim[receiver] = userFunds[receiver]*firstReturn/100;
                     userTransfer[receiver] =userClaim[receiver]-userClaimed[receiver];
                     BATK.transfer(receiver, userTransfer[receiver]);
                     userClaimed[receiver] += userTransfer[receiver];
                     userRemain[receiver] =userFunds[receiver]-userTransfer[receiver];
                 } else {
-                    if (TotalFlag > totalPeriods) {
-                        TotalFlag = totalPeriods;
+                    if (totalFlag > totalPeriods) {
+                        totalFlag = totalPeriods;
                     }
-                    userClaim[receiver] = userFunds[receiver]*FirstReturn/100;
-                    for (uint256 i = 1; i < TotalFlag + 1; i++) {
+                    userClaim[receiver] = userFunds[receiver]*firstReturn/100;
+                    for (uint256 i = 1; i < totalFlag + 1; i++) {
                         userClaim[receiver] += userFunds[receiver]*periodReturn/10000;
                     }
                     if (userClaim[receiver]>userFunds[receiver]){
@@ -142,6 +127,7 @@ contract IDO is Ownable {
         for (uint256 i = 0; i < numberOfAccounts; i++) {
         claimTokens(userToken[i]);
         }
+        emit VestingStopped();
     }
 
     function removeFromVesting(address receiver) public onlyAdmin{

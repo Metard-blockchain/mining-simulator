@@ -9,28 +9,19 @@ import "./libraries/Uniswap.sol";
 contract BAoEToken is Context, ERC20, Ownable {
 
     mapping(address => uint256) private _balances;
-
     mapping(address => mapping(address => uint256)) private _allowances;
-
     mapping(address => uint256) private adminlist;
 
     uint256 private _totalSupply;
-    uint8 private _decimals;
-    string private _symbol;
-    string private _name;
     address BUSD;
     address addressReceiver;
     address public uniswapV2Pair;
     uint256 public sellFeeRate = 2;
     uint256 public buyFeeRate = 2;
     uint256 public antiBot = 1;
-
     uint256 percentAmountWhale = 1;
 
     constructor(address _BUSD, address _addressReceiver) ERC20( "BAoE", "BA")  {
-        _name = "BAoE";
-        _symbol = "BA";
-        _decimals = 18;
         _totalSupply = 10**9 * 10**18;
         _mint(msg.sender, _totalSupply);
         adminlist[msg.sender] = 1;
@@ -59,23 +50,17 @@ contract BAoEToken is Context, ERC20, Ownable {
             amount = amount - _fee;
         }
         _transfer(_msgSender(), recipient, amount);
-        emit Transfer(_msgSender(), recipient, amount);
+        emit TransferStatus(_msgSender(), recipient, amount);
         return true;
     }
 
     modifier onlyAdmin(){
-        if (adminlist[msg.sender] == 0){
-            revert();
-        }
+        require(adminlist[_msgSender()]==1,"OnlyAdmin");
         _;
     }
 
     function isAdmin(address account)public returns (bool){
-        if (adminlist[account]>0)
-            return true;
-        else{
-            return false;
-        }
+        return adminlist[account]>0;
     }
     function _feeCalculation(
         address sender,
@@ -84,15 +69,11 @@ contract BAoEToken is Context, ERC20, Ownable {
     ) internal returns(uint256){
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
-
-           uint256 transferFeeRate = 0;
+        uint256 transferFeeRate = 0;
 
         if (antiBot == 1) {
-            if(isAdmin(sender) || isAdmin(recipient)) {
-                transferFeeRate = 0;         
-            }else{
-                require(0>1, "Revert transaction");
-            }
+            require(isAdmin(sender)||isAdmin(recipient),"Anti Bot");
+            transferFeeRate = 0;
         }else{
             if(sender == uniswapV2Pair){
                 if(isAdmin(recipient)) {
@@ -119,6 +100,7 @@ contract BAoEToken is Context, ERC20, Ownable {
     event DeactivateAntiBot(uint256 status);
     event AddedAdmin(address account);
     event RemovedAdmin(address account);
+    event TransferStatus(address sender, address recipient, uint256 amount);
 
     function changeBuyFeeRate(uint256 rate) public onlyAdmin {   
         buyFeeRate = rate;
