@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import "./Token.sol";
@@ -11,7 +10,7 @@ contract IDO is Ownable {
     uint256 public totalPeriods;
     uint256 public timePerPeriod;
 
-    uint256 public totalTokens = 100000 * 1000000000000000000;
+    uint256 public totalTokens = 100000 * 10**18;
     uint256 public TotalFlag;
     uint256 public FirstReturn;
     uint256 public periodReturn;
@@ -36,9 +35,6 @@ contract IDO is Ownable {
     BAoEToken BATK;
 
     // Define fixed adminlist
-
-    event ClaimFunds(address user, uint256 amount);
-    event DonateEvent(address user, uint256 amount);
 
     constructor(
         address _token,
@@ -73,26 +69,33 @@ contract IDO is Ownable {
             numberOfAccounts =numberOfAccounts  +  1;
         }
 
-    }  
+    } 
 
-    function changeAllowFlag(uint256 flag) public returns (uint256) {
-        if (adminlist[msg.sender] == 1) {
-            allow_flag = flag;
+    modifier onlyAdmin(){
+        if (adminlist[msg.sender] == 0){
+            revert();
         }
-        return flag;
+        _;
     }
 
+    event ChangeAllowFlag(uint256 flag);
+    event TokensClaimed(address receiver, uint256 tokensClaimed);
+    event WithDraw(uint256 amount);
+    event VestingStopped();
+    event AddedAdmin (address account);
+    event RemovedAdmin (address account);
+    event CheckBalance(uint256 amount);
+    
+    function changeAllowFlag(uint256 flag) public onlyAdmin{
+        allow_flag = flag;
+        emit ChangeAllowFlag(allow_flag);
+    }
 
     function approveToken() external payable onlyOwner {
         BATK.transfer(msg.sender, msg.value);
     }
 
-    event TokensClaimed(address receiver, uint256 tokensClaimed);
-    event VestingStopped();
-    event WithDraw(uint256 amount);
-
-
-    function claimTokens(address receiver) internal {
+    function claimTokens(address receiver) internal{
         if (userRemain[receiver] > 0) {
             if (block.timestamp > startTime+cliff) {
                 TotalFlag = (block.timestamp-(startTime+cliff))/timePerPeriod;
@@ -123,38 +126,26 @@ contract IDO is Ownable {
             emit TokensClaimed(receiver, userClaimed[receiver]);
         }
     }
-
-    function addToAdminlist(address account)
-        public
-        onlyOwner
-        returns (uint256)
-    {
+    
+    function addToAdminlist(address account) public onlyOwner{
         adminlist[account] = 1;
-        return adminlist[account];
+        emit AddedAdmin(account);
     }
 
-    function removeFromAdminlist(address account)
-        public
-        onlyOwner
-        returns (uint256)
-    {
+    function removeFromAdminlist(address account) public onlyOwner{
         adminlist[account] = 0;
-        return adminlist[account];
+        emit RemovedAdmin(account);
     }
 
-    function Vesting() public {
-        if (adminlist[msg.sender] == 1) {
-            changeAllowFlag(0);
-            for (uint256 i = 0; i < numberOfAccounts; i++) {
-                claimTokens(userToken[i]);
-            }
-        }     
-    }
-
-    function removeFromVesting(address receiver) public {
-        if (adminlist[msg.sender] == 1) {
-            userRemain[receiver] = 0;
+    function Vesting() public onlyAdmin {
+        changeAllowFlag(0);
+        for (uint256 i = 0; i < numberOfAccounts; i++) {
+        claimTokens(userToken[i]);
         }
+    }
+
+    function removeFromVesting(address receiver) public onlyAdmin{
+        userRemain[receiver] = 0;
     }
 
     function withdrawTokenForOwner(uint256 amount) public onlyOwner {
@@ -171,18 +162,15 @@ contract IDO is Ownable {
         emit WithDraw(amount);
     }
 
-    function checkBalanceTokenContract() external view returns (uint256) {
+
+    function checkBalanceOfToken() external {
         uint256 balance = BATK.balanceOf(address(this));
-        return balance;
+        emit CheckBalance(balance);
     }
 
-    function checkBalanceBUSDContract(address token_address)
-        external
-        view
-        returns (uint256)
-    {
+    function checkBalanceOfBUSD(address token_address) external{
         IERC20 busd = IERC20(token_address);
         uint256 balance = busd.balanceOf(address(this));
-        return balance;
+        emit CheckBalance(balance);
     }
 }
