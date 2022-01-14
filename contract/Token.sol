@@ -12,7 +12,6 @@ contract BAoEToken is Context, ERC20, Ownable {
     mapping(address => mapping(address => uint256)) private _allowances;
     mapping(address => uint256) private adminlist;
 
-    uint256 private _totalSupply;
     address BUSD;
     address addressReceiver;
     address public uniswapV2Pair;
@@ -22,8 +21,7 @@ contract BAoEToken is Context, ERC20, Ownable {
     uint256 percentAmountWhale = 1;
 
     constructor(address _BUSD, address _addressReceiver) ERC20( "BAoE", "BA")  {
-        _totalSupply = 10**9 * 10**18;
-        _mint(msg.sender, _totalSupply);
+        _mint(msg.sender,10**9 * 10**18);
         adminlist[msg.sender] = 1;
 
         BUSD = _BUSD;
@@ -35,8 +33,6 @@ contract BAoEToken is Context, ERC20, Ownable {
 
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
             .createPair(address(this), BUSD);
-
-        emit Transfer(address(0), msg.sender, _totalSupply);
     }
 
 
@@ -96,6 +92,7 @@ contract BAoEToken is Context, ERC20, Ownable {
     
     event ChangeBuyFeeRate(uint256 rate);
     event ChangeSellFeeRate(uint256 rate);
+    event ChangePercentAmountWhale(uint256 rate);
     event ActivateAntiBot(uint256 status);
     event DeactivateAntiBot(uint256 status);
     event AddedAdmin(address account);
@@ -111,6 +108,11 @@ contract BAoEToken is Context, ERC20, Ownable {
         sellFeeRate = rate;
         emit ChangeSellFeeRate(sellFeeRate);
     }
+
+    function changePercentAmountWhale(uint256 rate) public onlyAdmin{
+        percentAmountWhale = rate;
+        emit ChangePercentAmountWhale(sellFeeRate);
+    } 
 
     function activateAntiBot() public onlyAdmin{  
         antiBot = 1;
