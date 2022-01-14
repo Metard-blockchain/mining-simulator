@@ -110,6 +110,7 @@ contract BAoEToken is Context, ERC20, Ownable {
                 }
             }
         }
+        return transferFeeRate;
     }
     
     event ChangeBuyFeeRate(uint256 rate);
