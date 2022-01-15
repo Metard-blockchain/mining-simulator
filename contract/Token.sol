@@ -8,8 +8,6 @@ import "./libraries/Uniswap.sol";
 
 contract BAoEToken is Context, ERC20, Ownable {
 
-    mapping(address => uint256) private _balances;
-    mapping(address => mapping(address => uint256)) private _allowances;
     mapping(address => uint256) private adminlist;
 
     address BUSD;
