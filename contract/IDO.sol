@@ -1,5 +1,4 @@
 pragma solidity ^0.8.0;
-
 import "./Token.sol";
 
 contract IDO is Ownable {
@@ -12,6 +11,7 @@ contract IDO is Ownable {
     uint256 public firstReturn;
     uint256 public periodReturn;
     uint256 public numberOfAccounts = 0;
+    address public OwnAddress;
 
     mapping(uint256 => address) public userToken;
     mapping(address => uint256) public userFunds;
@@ -22,9 +22,7 @@ contract IDO is Ownable {
     mapping(address => uint256) public userTransfer;
     mapping(address => uint256) private adminlist;
    
-    BAoEToken BATK;
-
-    // Define fixed adminlist
+    BAoE BATK;
 
     constructor(
         address _token,
@@ -38,7 +36,7 @@ contract IDO is Ownable {
         uint256[] memory packages
 
     ) {
-        BATK = BAoEToken(_token);
+        BATK = BAoE(_token);
         firstReturn = _firstReturn;
         periodReturn = _periodReturn;
         startTime = _startTime;
@@ -98,7 +96,6 @@ contract IDO is Ownable {
                     userRemain[receiver] =userFunds[receiver] -userTransfer[receiver];
                 }
             }
-
             emit TokensClaimed(receiver, userClaimed[receiver]);
         }
     }
