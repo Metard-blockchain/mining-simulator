@@ -11,7 +11,6 @@ contract IDO is Ownable {
     uint256 public totalFlag;
     uint256 public firstReturn;
     uint256 public periodReturn;
-    uint256 public allow_flag = 1;
     uint256 public numberOfAccounts = 0;
 
     mapping(uint256 => address) public userToken;
@@ -71,14 +70,6 @@ contract IDO is Ownable {
     event RemovedAdmin (address account);
     event CheckBalance(uint256 amount);
     
-    function changeAllowFlag(uint256 flag) public onlyAdmin{
-        allow_flag = flag;
-        emit ChangeAllowFlag(allow_flag);
-    }
-
-    function approveToken() external payable onlyOwner {
-        BATK.transfer(msg.sender, msg.value);
-    }
 
     function claimTokens(address receiver) internal onlyAdmin{
         if (userRemain[receiver] > 0) {
@@ -123,7 +114,6 @@ contract IDO is Ownable {
     }
 
     function Vesting() public onlyAdmin {
-        changeAllowFlag(0);
         for (uint256 i = 0; i < numberOfAccounts; i++) {
         claimTokens(userToken[i]);
         }

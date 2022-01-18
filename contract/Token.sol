@@ -26,9 +26,8 @@ contract BAoEToken is Context, ERC20, Ownable {
         addressReceiver = _addressReceiver;
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-            0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3
+            0x10ED43C718714eb63d5aA57B78B54704E256024E
         );
-
         uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
             .createPair(address(this), BUSD);
     }
@@ -47,6 +46,24 @@ contract BAoEToken is Context, ERC20, Ownable {
         emit TransferStatus(_msgSender(), recipient, amount);
         return true;
     }
+
+
+     function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public virtual override returns (bool) {
+        
+        if (antiBot == 0) {
+           super.transferFrom(sender, recipient, amount);
+        } else {
+            require(isAdmin(sender)||isAdmin(recipient),"Anti Bot");
+            super.transferFrom(sender, recipient, amount);  
+        }
+        emit TransferFromStatus(sender, recipient, amount);
+        return true;
+    }
+
 
     modifier onlyAdmin(){
         require(adminlist[_msgSender()]==1,"OnlyAdmin");
@@ -96,6 +113,8 @@ contract BAoEToken is Context, ERC20, Ownable {
     event AddedAdmin(address account);
     event RemovedAdmin(address account);
     event TransferStatus(address sender, address recipient, uint256 amount);
+    event TransferFromStatus(address sender, address recipient, uint256 amount);
+
 
     function changeBuyFeeRate(uint256 rate) public onlyAdmin {   
         buyFeeRate = rate;
