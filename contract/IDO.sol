@@ -7,20 +7,16 @@ contract IDO is Ownable {
     uint256 public totalPeriods;
     uint256 public timePerPeriod;
     uint256 public totalTokens = 100000 * 10**18;
-    uint256 public totalFlag;
     uint256 public firstReturn;
     uint256 public periodReturn;
     uint256 public numberOfAccounts = 0;
-    address public OwnAddress;
 
     mapping(uint256 => address) public userToken;
     mapping(address => uint256) public userFunds;
     mapping(address => uint256) public userFundsInUSDT;
-    mapping(address => uint256) public userClaim;
     mapping(address => uint256) public userRemain;
     mapping(address => uint256) public userClaimed;
-    mapping(address => uint256) public userTransfer;
-    mapping(address => uint256) private adminlist;
+    mapping(address => uint256) public adminlist;
    
     BAoE BATK;
 
@@ -50,55 +46,52 @@ contract IDO is Ownable {
             userClaimed[accounts[i]] = 0;
             userRemain[accounts[i]] = userFunds[accounts[i]];
             userToken[numberOfAccounts] = accounts[i];
-            numberOfAccounts =numberOfAccounts  +  1;
+            numberOfAccounts = numberOfAccounts + 1;
         }
 
     } 
 
     modifier onlyAdmin(){
-        require(adminlist[_msgSender()]==1,"OnlyAdmin");
+        require(adminlist[_msgSender()]==1, "OnlyAdmin");
         _;
     }
 
-    event ChangeAllowFlag(uint256 flag);
     event TokensClaimed(address receiver, uint256 tokensClaimed);
     event WithDraw(uint256 amount);
-    event VestingStopped();
     event AddedAdmin (address account);
     event RemovedAdmin (address account);
-    event CheckBalance(uint256 amount);
-    
 
-    function claimTokens(address receiver) internal onlyAdmin{
-        if (userRemain[receiver] > 0) {
-            if (block.timestamp > startTime+cliff) {
-                totalFlag = (block.timestamp-(startTime+cliff))/timePerPeriod;
-                if (totalFlag == 0) {
-                    userClaim[receiver] = userFunds[receiver]*firstReturn/100;
-                    userTransfer[receiver] =userClaim[receiver]-userClaimed[receiver];
-                    BATK.transfer(receiver, userTransfer[receiver]);
-                    userClaimed[receiver] += userTransfer[receiver];
-                    userRemain[receiver] =userFunds[receiver]-userTransfer[receiver];
-                } else {
-                    if (totalFlag > totalPeriods) {
-                        totalFlag = totalPeriods;
-                    }
-                    userClaim[receiver] = userFunds[receiver]*firstReturn/100;
-                    for (uint256 i = 1; i < totalFlag + 1; i++) {
-                        userClaim[receiver] += userFunds[receiver]*periodReturn/10000;
-                    }
-                    if (userClaim[receiver]>userFunds[receiver]){
-                        userClaim[receiver]=userFunds[receiver];
-                    }
-                    userTransfer[receiver] =userClaim[receiver] -userClaimed[receiver];
-                    BATK.transfer(receiver, userTransfer[receiver]);
-                    userClaimed[receiver] += userTransfer[receiver];
-                    userRemain[receiver] =userFunds[receiver] -userTransfer[receiver];
-                }
-            }
-            emit TokensClaimed(receiver, userClaimed[receiver]);
-        }
+    function claimTokens() external {
+        address receiver = _msgSender();
+        require(userRemain[receiver] > 0, "Remain Token is zero");
+        uint256 claimableAmount = getClaimableAmount(receiver);
+        require(claimableAmount > 0 , "Claimable Token is zero");
+        
+        userClaimed[receiver] += claimableAmount;
+        userRemain[receiver] = userRemain[receiver]-claimableAmount;
+        BATK.transfer(receiver, claimableAmount);
+        emit TokensClaimed(receiver, claimableAmount);
     }
+
+    function getClaimableAmount(address receiver) view public returns (uint256) {
+        if (block.timestamp < startTime+cliff) {
+            return 0;
+        }
+
+        uint256 currentPeriod = (block.timestamp-(startTime+cliff))/timePerPeriod;
+
+        if (currentPeriod > totalPeriods) {
+            currentPeriod = totalPeriods;
+        }
+
+        uint256 claimAmount = userFunds[receiver] * firstReturn/100;
+
+        for (uint256 i = 1; i <= currentPeriod; i++) {
+            claimAmount += userFunds[receiver] * periodReturn/10000;
+        }
+
+        return claimAmount - userClaimed[receiver];
+    } 
     
     function addToAdminlist(address account) public onlyOwner{
         adminlist[account] = 1;
@@ -108,13 +101,6 @@ contract IDO is Ownable {
     function removeFromAdminlist(address account) public onlyOwner{
         adminlist[account] = 0;
         emit RemovedAdmin(account);
-    }
-
-    function Vesting() public onlyAdmin {
-        for (uint256 i = 0; i < numberOfAccounts; i++) {
-        claimTokens(userToken[i]);
-        }
-        emit VestingStopped();
     }
 
     function removeFromVesting(address receiver) public onlyAdmin{
@@ -136,14 +122,14 @@ contract IDO is Ownable {
     }
 
 
-    function checkBalanceOfToken() external {
+    function checkBalanceOfToken() view external returns(uint256) {
         uint256 balance = BATK.balanceOf(address(this));
-        emit CheckBalance(balance);
+        return balance;
     }
 
-    function checkBalanceOfBUSD(address token_address) external{
+    function checkBalanceOfBUSD(address token_address) view external returns(uint256) {
         IERC20 busd = IERC20(token_address);
         uint256 balance = busd.balanceOf(address(this));
-        emit CheckBalance(balance);
+        return balance;
     }
 }
