@@ -71,7 +71,6 @@ contract IDO is Ownable {
         userRemain[receiver] = userRemain[receiver]-claimableAmount;
         BATK.transfer(receiver, claimableAmount);
         emit TokensClaimed(receiver, claimableAmount);
-        // emit ClaimedAmount(claimableAmount,100);
     }
 
     function userClaimTokens() external {
@@ -102,7 +101,7 @@ contract IDO is Ownable {
         }
         uint256 claimAmount = userFunds[receiver] * firstReturn/100;
         for (uint256 i = 1; i <= currentPeriod; i++) {
-            claimAmount += userFunds[receiver] * periodReturn/10000;
+            claimAmount += currentPeriod * userFunds[receiver] * periodReturn/10000;
         }
          if (claimAmount > userFunds[receiver]) {
             claimAmount = userFunds[receiver];
