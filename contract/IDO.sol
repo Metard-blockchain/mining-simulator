@@ -100,9 +100,7 @@ contract IDO is Ownable {
             currentPeriod = totalPeriods;
         }
         uint256 claimAmount = userFunds[receiver] * firstReturn/100;
-        for (uint256 i = 1; i <= currentPeriod; i++) {
-            claimAmount += currentPeriod * userFunds[receiver] * periodReturn/10000;
-        }
+        claimAmount += currentPeriod * userFunds[receiver] * periodReturn/10000;
          if (claimAmount > userFunds[receiver]) {
             claimAmount = userFunds[receiver];
         }
