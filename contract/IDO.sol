@@ -6,7 +6,7 @@ contract IDO is Ownable {
     uint256 public cliff;
     uint256 public totalPeriods;
     uint256 public timePerPeriod;
-    uint256 public totalTokens = 100000 * 10**18;
+    uint256 public totalTokens = 150000 * 10**18;
     uint256 public firstReturn;
     uint256 public periodReturn;
     uint256 public numberOfAccounts = 0;
@@ -60,9 +60,9 @@ contract IDO is Ownable {
     event WithDraw(uint256 amount);
     event AddedAdmin (address account);
     event RemovedAdmin (address account);
+    event ClaimedAmount (uint256 amount, uint256 amount01);
 
-    function claimTokens() external {
-        address receiver = _msgSender();
+    function claimTokens(address receiver) public {
         require(userRemain[receiver] > 0, "Remain Token is zero");
         uint256 claimableAmount = getClaimableAmount(receiver);
         require(claimableAmount > 0 , "Claimable Token is zero");
@@ -71,25 +71,42 @@ contract IDO is Ownable {
         userRemain[receiver] = userRemain[receiver]-claimableAmount;
         BATK.transfer(receiver, claimableAmount);
         emit TokensClaimed(receiver, claimableAmount);
+        // emit ClaimedAmount(claimableAmount,100);
     }
 
-    function getClaimableAmount(address receiver) view public returns (uint256) {
+    function userClaimTokens() external {
+       claimTokens(_msgSender());
+    }
+
+    function claimBatch(address[] memory accounts) external{
+
+         for (uint256 i = 0; i < accounts.length; i++) {
+             claimTokens(accounts[i]);
+        }
+    }
+
+    function claimAll() external{
+        for (uint256 i = 0; i < numberOfAccounts; i++) {
+            claimTokens(userToken[i]);
+        }
+    }
+
+    function getClaimableAmount(address receiver) public returns (uint256) {
         if (block.timestamp < startTime+cliff) {
             return 0;
         }
-
         uint256 currentPeriod = (block.timestamp-(startTime+cliff))/timePerPeriod;
 
         if (currentPeriod > totalPeriods) {
             currentPeriod = totalPeriods;
         }
-
         uint256 claimAmount = userFunds[receiver] * firstReturn/100;
-
         for (uint256 i = 1; i <= currentPeriod; i++) {
             claimAmount += userFunds[receiver] * periodReturn/10000;
         }
-
+         if (claimAmount > userFunds[receiver]) {
+            claimAmount = userFunds[receiver];
+        }
         return claimAmount - userClaimed[receiver];
     } 
     

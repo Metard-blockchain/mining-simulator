@@ -1,12 +1,11 @@
 pragma solidity ^0.8.0;
-
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "./libraries/Uniswap.sol";
 
-contract BAoEToken is Context, ERC20, Ownable {
+contract BAoE is Context, ERC20, Ownable {
 
     mapping(address => uint256) private adminlist;
 
@@ -15,11 +14,11 @@ contract BAoEToken is Context, ERC20, Ownable {
     address public uniswapV2Pair;
     uint256 public sellFeeRate = 2;
     uint256 public buyFeeRate = 2;
-    uint256 public antiBot = 1;
+    uint256 public antiBot = 0;
     uint256 percentAmountWhale = 1;
 
-    constructor(address _BUSD, address _addressReceiver) ERC20( "BAoE", "BA")  {
-        _mint(msg.sender,10**9 * 10**18);
+    constructor(address _BUSD, address _addressReceiver) ERC20( "BAoE", "BAoE")  {
+        _mint(msg.sender,10**8 * 10**18);
         adminlist[msg.sender] = 1;
 
         BUSD = _BUSD;
@@ -28,40 +27,19 @@ contract BAoEToken is Context, ERC20, Ownable {
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
             0x10ED43C718714eb63d5aA57B78B54704E256024E
         );
-        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
-            .createPair(address(this), BUSD);
+        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), BUSD);
     }
 
 
-    function transfer(address recipient, uint256 amount)
-        public virtual override returns (bool)
-    {
-        uint256 transferFeeRate = _feeCalculation(_msgSender(), recipient, amount);
+    function _transfer(address sender, address recipient, uint256 amount) internal virtual override {
+        uint256 transferFeeRate = _feeCalculation(sender, recipient, amount);
         if (transferFeeRate > 0) {
             uint256 _fee = amount*transferFeeRate/100;
-            _transfer(_msgSender(), addressReceiver, _fee);
+            super._transfer(sender, addressReceiver, _fee);
             amount = amount - _fee;
         }
-        _transfer(_msgSender(), recipient, amount);
-        emit TransferStatus(_msgSender(), recipient, amount);
-        return true;
-    }
-
-
-     function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) public virtual override returns (bool) {
-        
-        if (antiBot == 0) {
-           super.transferFrom(sender, recipient, amount);
-        } else {
-            require(isAdmin(sender)||isAdmin(recipient),"Anti Bot");
-            super.transferFrom(sender, recipient, amount);  
-        }
-        emit TransferFromStatus(sender, recipient, amount);
-        return true;
+        super._transfer(sender, recipient, amount);
+        emit TransferStatus(sender, recipient, amount);
     }
 
 
@@ -70,7 +48,7 @@ contract BAoEToken is Context, ERC20, Ownable {
         _;
     }
 
-    function isAdmin(address account)public view returns (bool){
+    function isAdmin(address account)public returns (bool){
         return adminlist[account]>0;
     }
     function _feeCalculation(
@@ -113,8 +91,6 @@ contract BAoEToken is Context, ERC20, Ownable {
     event AddedAdmin(address account);
     event RemovedAdmin(address account);
     event TransferStatus(address sender, address recipient, uint256 amount);
-    event TransferFromStatus(address sender, address recipient, uint256 amount);
-
 
     function changeBuyFeeRate(uint256 rate) public onlyAdmin {   
         buyFeeRate = rate;
@@ -141,18 +117,12 @@ contract BAoEToken is Context, ERC20, Ownable {
         emit DeactivateAntiBot(antiBot);
     }
 
-    function addToAdminlist(address account)
-        public
-        onlyOwner
-    {
+    function addToAdminlist(address account) public onlyOwner{
         adminlist[account] = 1;
         emit AddedAdmin(account);
     }
 
-    function removeFromAdminlist(address account)
-        public
-        onlyOwner
-    {
+    function removeFromAdminlist(address account) public onlyOwner{
         adminlist[account] = 0;
         emit RemovedAdmin(account);
     }
