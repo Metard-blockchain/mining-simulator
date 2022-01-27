@@ -39,7 +39,6 @@ contract BAoE is Context, ERC20, Ownable {
             amount = amount - _fee;
         }
         super._transfer(sender, recipient, amount);
-        emit TransferStatus(sender, recipient, amount);
     }
 
 
@@ -89,6 +88,7 @@ contract BAoE is Context, ERC20, Ownable {
     event ActivateAntiBot(uint256 status);
     event DeactivateAntiBot(uint256 status);
     event AddedAdmin(address account);
+    event AddedBatchAdmin(address[] accounts);
     event RemovedAdmin(address account);
     event TransferStatus(address sender, address recipient, uint256 amount);
 
@@ -120,6 +120,13 @@ contract BAoE is Context, ERC20, Ownable {
     function addToAdminlist(address account) public onlyOwner{
         adminlist[account] = 1;
         emit AddedAdmin(account);
+    }
+
+    function addBatchToAdminlist(address[] memory accounts) public onlyOwner{
+        for (uint256 i = 0; i < accounts.length; i++) {
+            adminlist[accounts[i]]=1;
+        }
+        emit AddedBatchAdmin(accounts);
     }
 
     function removeFromAdminlist(address account) public onlyOwner{
