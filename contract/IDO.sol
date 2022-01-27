@@ -6,9 +6,9 @@ contract IDO is Ownable {
     uint256 public cliff;
     uint256 public totalPeriods;
     uint256 public timePerPeriod;
-    uint256 public totalTokens = 150000 * 10**18;
     uint256 public firstReturn;
     uint256 public periodReturn;
+    uint256 public exchangeRate;
     uint256 public numberOfAccounts = 0;
 
     mapping(uint256 => address) public userToken;
@@ -28,6 +28,7 @@ contract IDO is Ownable {
         uint256 _timePerPeriod,
         uint256 _firstReturn,
         uint256 _periodReturn,
+        uint256 _exchangeRate,
         address[] memory accounts,
         uint256[] memory packages
 
@@ -39,10 +40,11 @@ contract IDO is Ownable {
         cliff = _cliff;
         totalPeriods = _totalPeriods;
         timePerPeriod = _timePerPeriod;
+        exchangeRate = _exchangeRate;
         adminlist[msg.sender] = 1;
         for (uint256 i = 0; i < accounts.length; i++) {
             userFundsInUSDT[accounts[i]] += packages[i]*(10**18);
-            userFunds[accounts[i]] += (packages[i]*(10**18) * 40);
+            userFunds[accounts[i]] += (packages[i]*(10**18) * 1000/35);
             userClaimed[accounts[i]] = 0;
             userRemain[accounts[i]] = userFunds[accounts[i]];
             userToken[numberOfAccounts] = accounts[i];
@@ -91,22 +93,26 @@ contract IDO is Ownable {
     }
 
     function getClaimableAmount(address receiver) public returns (uint256) {
-        if (block.timestamp < startTime+cliff) {
+
+         if (block.timestamp < startTime) {
             return 0;
+        }
+        uint256 claimAmount = userFunds[receiver] * firstReturn/100;
+        if (block.timestamp < startTime+cliff) {
+            return claimAmount - userClaimed[receiver];
         }
         uint256 currentPeriod = (block.timestamp-(startTime+cliff))/timePerPeriod;
 
         if (currentPeriod > totalPeriods) {
             currentPeriod = totalPeriods;
         }
-        uint256 claimAmount = userFunds[receiver] * firstReturn/100;
         claimAmount += currentPeriod * userFunds[receiver] * periodReturn/10000;
-         if (claimAmount > userFunds[receiver]) {
+        if (claimAmount > userFunds[receiver]) {
             claimAmount = userFunds[receiver];
         }
         return claimAmount - userClaimed[receiver];
     } 
-    
+
     function addToAdminlist(address account) public onlyOwner{
         adminlist[account] = 1;
         emit AddedAdmin(account);
