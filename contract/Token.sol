@@ -18,7 +18,7 @@ contract BAoE is Context, ERC20, Ownable {
     uint256 percentAmountWhale = 1;
 
     constructor(address _BUSD, address _addressReceiver) ERC20( "BAoE", "BAoE")  {
-        _mint(msg.sender,10**8 * 10**18);
+        _mint(msg.sender,10**9 * 10**18);
         adminlist[msg.sender] = 1;
 
         BUSD = _BUSD;
